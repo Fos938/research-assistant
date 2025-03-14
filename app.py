@@ -12,8 +12,12 @@ st.markdown("An AI-powered research tool using Perplexity API")
 # Sidebar for API key
 with st.sidebar:
     st.header("Settings")
-    api_key = st.text_input("Perplexity API Key", type="password", 
-                          help="Your app requires this key to work. Get one at perplexity.ai")
+    # Get API key from secrets or allow user override
+    default_api_key = st.secrets.get("PERPLEXITY_API_KEY", "")
+    api_key = st.text_input("Perplexity API Key", 
+                          value=default_api_key,
+                          type="password", 
+                          help="Using default API key from secrets. You can override it here.")
     model = st.selectbox("Model", ["sonar-reasoning-pro", "sonar-pro"], index=0)
 
 # Function to call Perplexity API directly
