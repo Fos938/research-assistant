@@ -1,5 +1,6 @@
 import streamlit as st
-from openai import OpenAI
+import requests
+import json
 
 # Page config
 st.set_page_config(page_title="Research Assistant", page_icon="🔍")
@@ -11,8 +12,41 @@ st.markdown("An AI-powered research tool using Perplexity API")
 # Sidebar for API key
 with st.sidebar:
     st.header("Settings")
-    api_key = st.text_input("Perplexity API Key", type="password")
+    api_key = st.text_input("Perplexity API Key", type="password", 
+                          help="Your app requires this key to work. Get one at perplexity.ai")
     model = st.selectbox("Model", ["sonar-reasoning-pro", "sonar-pro"], index=0)
+
+# Function to call Perplexity API directly
+def call_perplexity_api(prompt, api_key, model):
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an elite research assistant with exceptional analytical abilities."
+            },
+            {
+                "role": "user", 
+                "content": prompt
+            }
+        ]
+    }
+    
+    response = requests.post(
+        "https://api.perplexity.ai/chat/completions",
+        headers=headers,
+        json=payload
+    )
+    
+    if response.status_code == 200:
+        return response.json()["choices"][0]["message"]["content"]
+    else:
+        return f"Error: {response.status_code} - {response.text}"
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -36,27 +70,11 @@ if prompt := st.chat_input("What would you like to research?"):
             st.write("Please enter your Perplexity API key in the sidebar to continue.")
         st.session_state.messages.append({"role": "assistant", "content": "Please enter your Perplexity API key in the sidebar to continue."})
     else:
-        # Create OpenAI client with Perplexity base URL
-        client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
-        
-        # Prepare messages for API
-        messages = [
-            {
-                "role": "system",
-                "content": "You are an elite research assistant with exceptional analytical abilities."
-            },
-            {"role": "user", "content": prompt}
-        ]
-        
         # Generate response
         with st.chat_message("assistant"):
             with st.spinner("Researching..."):
                 try:
-                    response = client.chat.completions.create(
-                        model=model,
-                        messages=messages,
-                    )
-                    answer = response.choices[0].message.content
+                    answer = call_perplexity_api(prompt, api_key, model)
                     st.write(answer)
                     
                     # Add assistant response to chat history
